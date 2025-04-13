@@ -84,6 +84,9 @@ func newSSHCmd(app *App) *cobra.Command {
 						"version": "latest"
 					}
 				}
+
+			You can use the %[1]sGH_CS_SSH_COMMAND%[1]s environment variable to specify an alternative SSH command
+			to use instead of the default %[1]sssh%[1]s command.
 		`, "`"),
 		Example: heredoc.Doc(`
 			$ gh codespace ssh
@@ -735,6 +738,9 @@ func newCpCmd(app *App) *cobra.Command {
 
 			By default, the %[1]scp%[1]s command will create a public/private ssh key pair to authenticate with
 			the codespace inside the %[1]s~/.ssh directory%[1]s.
+
+			You can use the %[1]sGH_CS_SCP_COMMAND%[1]s environment variable to specify an alternative SCP command
+			to use instead of the default %[1]sscp%[1]s command.
 		`, "`"),
 		Example: heredoc.Doc(`
 			$ gh codespace cp -e README.md 'remote:/workspaces/$RepositoryName/'

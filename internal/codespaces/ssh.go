@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/cli/safeexec"
+	"github.com/google/shlex"
 )
 
 type printer interface {
@@ -77,12 +78,11 @@ func newSSHCommand(ctx context.Context, port int, dst string, cmdArgs []string, 
 		cmdArgs = append(cmdArgs, command...)
 	}
 
-	exe, err := safeexec.LookPath("ssh")
+	cmd, err := newCommandFromEnv(ctx, "GH_CS_SSH_COMMAND", "ssh", cmdArgs)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to execute ssh: %w", err)
+		return nil, nil, err
 	}
 
-	cmd := exec.CommandContext(ctx, exe, cmdArgs...)
 	cmd.Stdout = os.Stdout
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr
@@ -127,14 +127,10 @@ func newSCPCommand(ctx context.Context, port int, dst string, cmdArgs []string) 
 		cmdArgs = append(cmdArgs, arg)
 	}
 
-	exe, err := safeexec.LookPath("scp")
+	cmd, err := newCommandFromEnv(ctx, "GH_CS_SCP_COMMAND", "scp", cmdArgs)
 	if err != nil {
-		return nil, fmt.Errorf("failed to execute scp: %w", err)
+		return nil, err
 	}
-
-	// Beware: invalid syntax causes scp to exit 1 with
-	// no error message, so don't let that happen.
-	cmd := exec.CommandContext(ctx, exe, cmdArgs...)
 
 	cmd.Stdin = nil
 	cmd.Stdout = os.Stderr
@@ -171,4 +167,33 @@ func parseArgs(args []string, unaryFlags string) (cmdArgs, command []string, err
 	}
 
 	return cmdArgs, command, nil
+}
+
+// newCommandFromEnv creates a new exec.Cmd using either the command specified in the environment variable
+// or the default command. It handles parsing the environment variable for both the command path and any
+// additional arguments.
+func newCommandFromEnv(ctx context.Context, envVar, defaultCmd string, cmdArgs []string) (*exec.Cmd, error) {
+	exe := os.Getenv(envVar)
+	if exe == "" {
+		var err error
+		exe, err = safeexec.LookPath(defaultCmd)
+		if err != nil {
+			return nil, fmt.Errorf("failed to execute %s: %w", defaultCmd, err)
+		}
+		return exec.CommandContext(ctx, exe, cmdArgs...), nil
+	}
+
+	// Parse the environment variable using shlex
+	parts, err := shlex.Split(exe)
+	if err != nil {
+		return nil, fmt.Errorf("invalid %s: %w", envVar, err)
+	}
+	if len(parts) == 0 {
+		return nil, fmt.Errorf("empty %s", envVar)
+	}
+	exe = parts[0]
+	envArgs := parts[1:]
+
+	// Combine environment args with command args
+	return exec.CommandContext(ctx, exe, append(envArgs, cmdArgs...)...), nil
 }
