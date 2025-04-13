@@ -1,0 +1,9 @@
+Version: 1.99.0-insider
+Commit: cb9445f01be3bdd0a86e1634344ac3acd179a135
+Date: 2025-04-01T14:28:24.727Z
+Electron: 34.3.2
+ElectronBuildId: 11161073
+Chromium: 132.0.6834.210
+Node.js: 20.18.3
+V8: 13.2.152.41-electron.0
+OS: Darwin arm64 24.3.0

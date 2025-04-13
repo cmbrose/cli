@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/cli/safeexec"
+	"github.com/google/shlex"
 )
 
 type printer interface {
@@ -77,9 +78,13 @@ func newSSHCommand(ctx context.Context, port int, dst string, cmdArgs []string, 
 		cmdArgs = append(cmdArgs, command...)
 	}
 
-	exe, err := safeexec.LookPath("ssh")
+	exe, envArgs, err := getCommandExecutableAndArgs("GH_CS_SSH_COMMAND", "ssh")
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to execute ssh: %w", err)
+		return nil, nil, err
+	}
+
+	if len(envArgs) > 0 {
+		cmdArgs = append(envArgs, cmdArgs...)
 	}
 
 	cmd := exec.CommandContext(ctx, exe, cmdArgs...)
@@ -127,9 +132,13 @@ func newSCPCommand(ctx context.Context, port int, dst string, cmdArgs []string) 
 		cmdArgs = append(cmdArgs, arg)
 	}
 
-	exe, err := safeexec.LookPath("scp")
+	exe, envArgs, err := getCommandExecutableAndArgs("GH_CS_SCP_COMMAND", "scp")
 	if err != nil {
-		return nil, fmt.Errorf("failed to execute scp: %w", err)
+		return nil, err
+	}
+
+	if len(envArgs) > 0 {
+		cmdArgs = append(envArgs, cmdArgs...)
 	}
 
 	// Beware: invalid syntax causes scp to exit 1 with
@@ -171,4 +180,44 @@ func parseArgs(args []string, unaryFlags string) (cmdArgs, command []string, err
 	}
 
 	return cmdArgs, command, nil
+}
+
+// parseCommand splits a command string into the executable path and its arguments.
+// It uses shlex to parse the command string in a shell-like fashion, respecting quotes
+// and handling paths with spaces correctly.
+func parseCommand(cmdStr string) (string, []string) {
+	if cmdStr == "" {
+		return "", nil
+	}
+
+	parts, err := shlex.Split(cmdStr)
+	if err != nil || len(parts) == 0 {
+		return "", nil
+	}
+
+	return parts[0], parts[1:]
+}
+
+// getCommandExecutableAndArgs gets the executable path and initial arguments
+// for a command based on an environment variable or falling back to a default command.
+// Returns the executable path, any arguments from the env var, and an error if any.
+func getCommandExecutableAndArgs(envVarName, defaultCmd string) (string, []string, error) {
+	// Check for environment variable override
+	envCommand := os.Getenv(envVarName)
+	if envCommand != "" {
+		// Parse the environment command string to extract executable and any args
+		exe, envArgs := parseCommand(envCommand)
+		if exe != "" {
+			return exe, envArgs, nil
+		}
+		// If parsing failed, fall back to assuming it's just a path
+		return envCommand, nil, nil
+	}
+	
+	// No environment variable set, look up the default command
+	exe, err := safeexec.LookPath(defaultCmd)
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to execute %s: %w", defaultCmd, err)
+	}
+	return exe, nil, nil
 }

@@ -84,6 +84,13 @@ func newSSHCmd(app *App) *cobra.Command {
 						"version": "latest"
 					}
 				}
+
+			Environment Variables:
+			  %[1]sGH_CS_SSH_COMMAND%[1]s: Override the SSH command used by %[1]sgh cs ssh%[1]s.
+			  If not set, the default %[1]sssh%[1]s command found in PATH will be used.
+			  The value can include both the command path and arguments, for example:
+			  %[1]sGH_CS_SSH_COMMAND=/path/to/ssh -v -o ProxyCommand=none%[1]s
+			  For paths with spaces, use quotes: %[1]sGH_CS_SSH_COMMAND="/path/with spaces/ssh" -o key=value%[1]s
 		`, "`"),
 		Example: heredoc.Doc(`
 			$ gh codespace ssh
@@ -735,6 +742,13 @@ func newCpCmd(app *App) *cobra.Command {
 
 			By default, the %[1]scp%[1]s command will create a public/private ssh key pair to authenticate with
 			the codespace inside the %[1]s~/.ssh directory%[1]s.
+
+			Environment Variables:
+			  %[1]sGH_CS_SCP_COMMAND%[1]s: Override the SCP command used by %[1]sgh cs cp%[1]s.
+			  If not set, the default %[1]sscp%[1]s command found in PATH will be used.
+			  The value can include both the command path and arguments, for example:
+			  %[1]sGH_CS_SCP_COMMAND=/path/to/scp -l 8192 -q%[1]s
+			  For paths with spaces, use quotes: %[1]sGH_CS_SCP_COMMAND="/path/with spaces/scp" -q%[1]s
 		`, "`"),
 		Example: heredoc.Doc(`
 			$ gh codespace cp -e README.md 'remote:/workspaces/$RepositoryName/'
